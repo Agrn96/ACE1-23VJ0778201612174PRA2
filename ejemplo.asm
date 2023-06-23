@@ -1,15 +1,3 @@
-print macro buffer ; Macro para imprimir una cadena de caracteres
-PUSH AX 
-PUSH DX 
-    MOV AX, @DATA 
-    MOV DS, AX 
-    MOV AH, 9 
-    MOV DX, OFFSET buffer 
-    INT 21H 
-POP DX 
-POP AX 
-ENDM ; Fin de la macro print
-
 .MODEL SMALL
 .RADIX 16
 .STACK
@@ -26,35 +14,34 @@ tam_liena_leida        db     00
 handle_conf            dw     0000
 nombre_conf            db     "PRA2.CNF", 00
 ;;
-tam_encabezado_html    db     0ch
+tam_encabezado_html    db     0c
 encabezado_html        db     "<html><body>"
-tam_inicializacion_tabla   db   5eh
-inicializacion_tabla   db     '<table border="1"><tr><td>codigo</td><td>descripcion</td><td>precio</td><td>unidades</td></tr>'
+tam_inicializacion_tabla   db   3e
+inicializacion_tabla   db     '<table border="1"><tr><td>codigo</td><td>descripcion</td></tr>'
 tam_cierre_tabla       db     8
 cierre_tabla           db     "</table>"
-tam_footer_html        db     0eh
+tam_footer_html        db     0e
 footer_html            db     "</body></html>"
 td_html                db     "<td>"
 tdc_html               db     "</td>"
 tr_html                db     "<tr>"
 trc_html               db     "</tr>"
 ;; tokens
-tk_creds               db     0eh, "[credenciales]"
+tk_creds               db     0e, "[credenciales]"
 tk_nombre              db     07, "usuario"
 tk_clave               db     05, "clave"
 tk_igual               db     01, "="
 tk_comillas            db     01, '"'
 ;;
-ceros          db   2bh    dup (0)
+ceros          db     2  dup (0)
 ;; VARIABLES | MEMORIA RAM
 numero           db   05 dup (30)
 ;;
 usac       db    "Universidad de San Carlos de Guatemala",0a,"$"
 facultad   db    "Facultad de Ingenieria",0a,"$"
 curso      db    "Arquitectura de Computadoras y Ensambladores 1",0a,"$"
-nombre     db    "Alberto Gabriel Reyes Ning",0a,"$"
-carne      db    "201612174",0a,"$"
-
+nombre     db    "Ronald Rodrigo Marin",0a,"$"
+carne      db    "201902425",0a,"$"
 productos  db    "(P)roductos",0a,"$"
 ventas     db    "(V)entas",0a,"$"
 herramientas db  "(H)erramientas",0a,"$"
@@ -78,6 +65,7 @@ buffer_entrada   db  20, 00
                  db  20 dup (0)
 mostrar_prod     db  "(M)ostrar productos",0a,"$"
 ingresar_prod    db  "(I)ngresar producto",0a,"$"
+editar_prod      db  "(E)ditar producto",0a,"$"
 borrar_prod      db  "(B)orrar producto",0a,"$"
 prods_registrados db "Productos registrados:",0a,"$"
 ;;; temps
@@ -170,6 +158,9 @@ menu_productos:
 		mov DX, offset ingresar_prod
 		mov AH, 09
 		int 21
+		mov DX, offset editar_prod
+		mov AH, 09
+		int 21
 		mov DX, offset borrar_prod
 		mov AH, 09
 		int 21
@@ -182,6 +173,7 @@ menu_productos:
 		;; AL = CARACTER LEIDO
 		cmp AL, 62 ;; borrar
 		je eliminar_producto_archivo
+		cmp AL, 65 ;; editar
 		cmp AL, 69 ;; insertar
 		je ingresar_producto_archivo
 		cmp AL, 6dh ;; mostrar
@@ -510,17 +502,17 @@ ciclo_encontrar:
 		mov BX, [handle_prods]
 		mov CX, 26
 		mov DX, offset cod_prod
-		moV AH, 3fh
+		moV AH, 3f
 		int 21
 		mov BX, [handle_prods]
 		mov CX, 4
 		mov DX, offset num_price
-		moV AH, 3fh
+		moV AH, 3f
 		int 21
 		cmp AX, 0000   ;; se acaba cuando el archivo se termina
 		je finalizar_borrar
 		mov DX, [puntero_temp]
-		add DX, 2ah
+		add DX, 2a
 		mov [puntero_temp], DX
 		;;; verificar si es producto válido
 		mov AL, 00
@@ -537,20 +529,20 @@ ciclo_encontrar:
 		jmp ciclo_encontrar
 borrar_encontrado:
 		mov DX, [puntero_temp]
-		sub DX, 2ah
+		sub DX, 2a
 		mov CX, 0000
 		mov BX, [handle_prods]
 		mov AL, 00
 		mov AH, 42
 		int 21
 		;;; puntero posicionado
-		mov CX, 2ah
+		mov CX, 2a
 		mov DX, offset ceros
 		mov AH, 40
 		int 21
 finalizar_borrar:
 		mov BX, [handle_prods]
-		mov AH, 3eh
+		mov AH, 3e
 		int 21
 		jmp menu_productos
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -602,25 +594,18 @@ ciclo_mostrar_rep1:
 		mov CX, 26     ;; leer 26h bytes
 		mov DX, offset cod_prod
 		;;
-		mov AH, 3fh
+		mov AH, 3f
 		int 21
 		;; puntero avanzó
 		mov BX, [handle_prods]
 		mov CX, 0004
 		mov DX, offset num_price
-		mov AH, 3fh
+		mov AH, 3f
 		int 21
-
-		;mov BX, [handle_prods]
-		;mov CX, 0004
-		;mov DX, offset num_units
-		;mov AH, 3fh
-		;int 21
-
 		;; ¿cuántos bytes leímos?
 		;; si se leyeron 0 bytes entonces se terminó el archivo...
 		cmp AX, 00
-		je fin_mostrar_rep1
+		je fin_mostrar
 		;; ver si es producto válido
 		mov AL, 00
 		cmp [cod_prod], AL
@@ -644,7 +629,7 @@ fin_mostrar_rep1:
 		mov DX, offset footer_html
 		int 21
 		;;
-		mov AH, 3eh
+		mov AH, 3e
 		int 21
 		jmp menu_principal
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -741,9 +726,9 @@ ciclo_escribir_desc:
 		mov DI, DX
 		mov AL, [DI]
 		cmp AL, 00
-		je escribir_precio
+		je cerrar_tags
 		cmp SI, 0026
-		je escribir_precio
+		je cerrar_tags
 		mov CX, 0001
 		mov BX, [handle_reps]
 		mov AH, 40
@@ -751,80 +736,6 @@ ciclo_escribir_desc:
 		inc DX
 		inc SI
 		jmp ciclo_escribir_desc
-		;;
-
-escribir_precio:
-		;;
-		mov BX, [handle_reps]
-		mov AH, 40
-		mov CH, 00
-		mov CL, 05
-		mov DX, offset tdc_html
-		int 21
-		;;
-		mov BX, [handle_reps]
-		mov AH, 40
-		mov CH, 00
-		mov CL, 04
-		mov DX, offset td_html
-		int 21
-		;;
-		mov AX, [num_price]
-		call numAcadena
-		mov DX, offset numero
-		mov SI, 0000
-		
-ciclo_escribir_precio:
-		mov DI, DX
-		mov AL, [DI]
-		cmp AL, 00
-		je escribir_unidades
-		cmp SI, 0005
-		je escribir_unidades
-		mov CX, 0001
-		mov BX, [handle_reps]
-		mov AH, 40
-		int 21
-		inc DX
-		inc SI
-		jmp ciclo_escribir_precio
-		;;
-
-escribir_unidades:
-		;;
-		mov BX, [handle_reps]
-		mov AH, 40
-		mov CH, 00
-		mov CL, 05
-		mov DX, offset tdc_html
-		int 21
-		;;
-		mov BX, [handle_reps]
-		mov AH, 40
-		mov CH, 00
-		mov CL, 04
-		mov DX, offset td_html
-		int 21
-		;;
-		mov AX, [num_units]
-		call numAcadena
-		mov DX, offset numero
-		mov SI, 0000
-		
-ciclo_escribir_unidades:
-		mov DI, DX
-		mov AL, [DI]
-		cmp AL, 00
-		je cerrar_tags
-		cmp SI, 0005
-		je cerrar_tags
-		mov CX, 0001
-		mov BX, [handle_reps]
-		mov AH, 40
-		int 21
-		inc DX
-		inc SI
-		jmp ciclo_escribir_unidades
 		;;
 cerrar_tags:
 		mov BX, [handle_reps]
@@ -910,7 +821,7 @@ ciclo_convertirAcadena:
 		mov BL, [DI]
 		inc BL
 		mov [DI], BL
-		cmp BL, 3ah
+		cmp BL, 3a
 		je aumentar_siguiente_digito_primera_vez
 		loop ciclo_convertirAcadena
 		jmp retorno_convertirAcadena
@@ -923,7 +834,7 @@ aumentar_siguiente_digito:
 		mov BL, [DI]
 		inc BL
 		mov [DI], BL
-		cmp BL, 3ah
+		cmp BL, 3a
 		je aumentar_siguiente_digito
 		pop DI         ; se recupera DI
 		loop ciclo_convertirAcadena
@@ -978,7 +889,7 @@ ciclo_lineaXlinea:
 		mov AL, 00
 		mov [tam_liena_leida], AL
 ciclo_obtener_linea:
-		mov AH, 3fh
+		mov AH, 3f
 		mov BX, [handle_conf]
 		mov CX, 0001
 		mov DX, DI
